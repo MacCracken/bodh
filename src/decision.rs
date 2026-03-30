@@ -250,6 +250,15 @@ mod tests {
     }
 
     #[test]
+    fn test_probability_weighting_reference_value() {
+        // w(0.5, gamma=0.61): p^g = 0.5^0.61, q^g = 0.5^0.61
+        // w = p^g / (p^g + q^g)^(1/g) = 0.5^0.61 / (2 * 0.5^0.61)^(1/0.61)
+        // Known reference: w(0.5) ≈ 0.421 (TK92 Table III).
+        let w = probability_weighting(0.5, 0.61).unwrap();
+        assert!((w - 0.421).abs() < 0.01);
+    }
+
+    #[test]
     fn test_probability_weighting_overweights_small() {
         // Small probabilities should be overweighted: w(0.05) > 0.05.
         let w = probability_weighting(0.05, 0.61).unwrap();

@@ -15,6 +15,12 @@ fn bench_fitts_law(c: &mut Criterion) {
     });
 }
 
+fn bench_fitts_law_shannon(c: &mut Criterion) {
+    c.bench_function("psychophysics/fitts_law_shannon", |b| {
+        b.iter(|| bodh::psychophysics::fitts_law_shannon(black_box(256.0), black_box(4.0)))
+    });
+}
+
 fn bench_ebbinghaus(c: &mut Criterion) {
     c.bench_function("learning/ebbinghaus_forgetting", |b| {
         b.iter(|| bodh::learning::ebbinghaus_forgetting(black_box(1.0), black_box(2.0)))
@@ -115,6 +121,7 @@ criterion_group!(
     benches,
     bench_weber_fechner,
     bench_fitts_law,
+    bench_fitts_law_shannon,
     bench_ebbinghaus,
     bench_prospect_theory,
     bench_d_prime,

@@ -37,12 +37,17 @@ pub fn ebbinghaus_forgetting_full(strength: f64, time: f64, stability: f64) -> R
     Ok(strength * retention)
 }
 
-/// Spaced repetition interval using a simplified SM-2-like algorithm.
+/// Geometric spaced repetition interval.
 ///
 /// `interval = base_interval * ease^(repetition - 1)`
 ///
 /// where `repetition` is the review number (1-indexed) and `ease` is
 /// the ease factor (typically 2.5 for a well-learned item).
+///
+/// This is a geometric growth model commonly used in modern spaced
+/// repetition systems. It is *not* the literal SM-2 algorithm (which
+/// uses hardcoded first intervals of 1 and 6 days), but captures the
+/// same exponentially-growing interval principle.
 ///
 /// # Errors
 ///

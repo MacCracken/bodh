@@ -94,28 +94,49 @@ impl StevensExponent {
     }
 }
 
-/// Fitts' law: time to move to a target as a function of distance and width.
+/// Fitts' law (original formulation): index of difficulty for aimed movement.
 ///
-/// `MT = a + b * log2(2D / W)`
-///
-/// where `D` is distance to target center, `W` is target width, `a` is
-/// intercept (reaction time), and `b` is the slope (1/throughput).
-///
-/// Returns the index of difficulty (in bits) when `a=0, b=1`:
 /// `ID = log2(2D / W)`
+///
+/// where `D` is distance to target center and `W` is target width.
+///
+/// This is Fitts' original 1954 formulation. For the ISO 9241-411 standard
+/// formulation preferred in modern HCI, see [`fitts_law_shannon`].
 ///
 /// # Errors
 ///
 /// Returns [`BodhError::InvalidParameter`] if distance or width is non-positive.
 #[inline]
-#[must_use = "returns the movement time without side effects"]
+#[must_use = "returns the index of difficulty in bits without side effects"]
 pub fn fitts_law(distance: f64, width: f64) -> Result<f64> {
     validate_positive(distance, "distance")?;
     validate_positive(width, "width")?;
     Ok((2.0 * distance / width).log2())
 }
 
-/// Fitts' law with custom intercept and slope.
+/// Fitts' law (Shannon formulation, ISO 9241-411).
+///
+/// `ID = log2(D / W + 1)`
+///
+/// This is the formulation from MacKenzie (1992), adopted by ISO 9241-411
+/// for evaluating pointing devices. It has a stronger information-theoretic
+/// basis and better empirical fit than the original Fitts formulation.
+///
+/// Returns 0.0 when `distance` is 0 (no movement = zero difficulty).
+///
+/// # Errors
+///
+/// Returns [`BodhError::InvalidParameter`] if distance is negative or width
+/// is non-positive.
+#[inline]
+#[must_use = "returns the index of difficulty in bits without side effects"]
+pub fn fitts_law_shannon(distance: f64, width: f64) -> Result<f64> {
+    crate::error::validate_non_negative(distance, "distance")?;
+    validate_positive(width, "width")?;
+    Ok((distance / width + 1.0).log2())
+}
+
+/// Fitts' law with custom intercept and slope (original formulation).
 ///
 /// `MT = a + b * log2(2D / W)`
 ///
@@ -127,6 +148,23 @@ pub fn fitts_law(distance: f64, width: f64) -> Result<f64> {
 #[must_use = "returns the movement time without side effects"]
 pub fn fitts_law_full(distance: f64, width: f64, a: f64, b: f64) -> Result<f64> {
     let id = fitts_law(distance, width)?;
+    validate_finite(a, "a")?;
+    validate_finite(b, "b")?;
+    Ok(a + b * id)
+}
+
+/// Fitts' law with custom intercept and slope (Shannon formulation).
+///
+/// `MT = a + b * log2(D / W + 1)`
+///
+/// # Errors
+///
+/// Returns [`BodhError::InvalidParameter`] if distance is negative, width is
+/// non-positive, or `a`/`b` are non-finite.
+#[inline]
+#[must_use = "returns the movement time without side effects"]
+pub fn fitts_law_shannon_full(distance: f64, width: f64, a: f64, b: f64) -> Result<f64> {
+    let id = fitts_law_shannon(distance, width)?;
     validate_finite(a, "a")?;
     validate_finite(b, "b")?;
     Ok(a + b * id)
@@ -283,6 +321,33 @@ mod tests {
         // Already tested via test_hicks_law_with_intercept, but verify a=0 case.
         let rt = hicks_law_full(4, 0.0, 1.0).unwrap();
         assert!((rt - 2.0).abs() < 1e-10); // log2(4) = 2
+    }
+
+    #[test]
+    fn test_fitts_law_shannon_basic() {
+        // D=256, W=4 → ID = log2(256/4 + 1) = log2(65) ≈ 6.022 bits.
+        let id = fitts_law_shannon(256.0, 4.0).unwrap();
+        assert!((id - 65.0_f64.log2()).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_fitts_law_shannon_zero_distance() {
+        // D=0 → ID = log2(0/W + 1) = log2(1) = 0.
+        let id = fitts_law_shannon(0.0, 4.0).unwrap();
+        assert!((id - 0.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_fitts_law_shannon_full() {
+        let mt = fitts_law_shannon_full(256.0, 4.0, 0.1, 0.05).unwrap();
+        let expected = 0.1 + 0.05 * 65.0_f64.log2();
+        assert!((mt - expected).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_fitts_law_shannon_invalid() {
+        assert!(fitts_law_shannon(-1.0, 4.0).is_err());
+        assert!(fitts_law_shannon(10.0, 0.0).is_err());
     }
 
     #[test]

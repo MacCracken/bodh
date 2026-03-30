@@ -207,6 +207,21 @@ mod tests {
     }
 
     #[test]
+    fn test_probit_accuracy() {
+        // Verify probit via d_prime: z(0.975) ≈ 1.96, z(0.5) = 0.
+        // d'(0.975, 0.5) = z(0.975) - z(0.5) ≈ 1.96 - 0 = 1.96.
+        let d = d_prime(0.975, 0.5).unwrap();
+        assert!((d - 1.96).abs() < 0.001); // A&S 26.2.23 error < 4.5e-4
+    }
+
+    #[test]
+    fn test_d_prime_reference_90_10() {
+        // d'(0.9, 0.1): z(0.9) ≈ 1.2816, z(0.1) ≈ -1.2816, d' ≈ 2.563.
+        let d = d_prime(0.9, 0.1).unwrap();
+        assert!((d - 2.563).abs() < 0.01);
+    }
+
+    #[test]
     fn test_signal_detection_serde_roundtrip() {
         let sd = SignalDetection::new(0.8, 0.2).unwrap();
         let json = serde_json::to_string(&sd).unwrap();
