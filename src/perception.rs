@@ -162,11 +162,11 @@ mod tests {
     }
 
     #[test]
-    fn test_d_prime_symmetric() {
-        // d'(0.9, 0.1) should be close to d'(0.9, 0.1).
-        let d1 = d_prime(0.9, 0.1).unwrap();
-        let d2 = d_prime(0.9, 0.1).unwrap();
-        assert!((d1 - d2).abs() < 1e-10);
+    fn test_d_prime_known_reference() {
+        // d'(0.75, 0.25) ≈ 1.349 (from standard normal z-tables:
+        // z(0.75) ≈ 0.6745, z(0.25) ≈ -0.6745, d' ≈ 1.349).
+        let d = d_prime(0.75, 0.25).unwrap();
+        assert!((d - 1.349).abs() < 0.01);
     }
 
     #[test]

@@ -272,6 +272,20 @@ mod tests {
     }
 
     #[test]
+    fn test_fitts_law_full() {
+        // D=256, W=4, a=0.1, b=0.05: MT = 0.1 + 0.05 * 7.0 = 0.45.
+        let mt = fitts_law_full(256.0, 4.0, 0.1, 0.05).unwrap();
+        assert!((mt - 0.45).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_hicks_law_full_basic() {
+        // Already tested via test_hicks_law_with_intercept, but verify a=0 case.
+        let rt = hicks_law_full(4, 0.0, 1.0).unwrap();
+        assert!((rt - 2.0).abs() < 1e-10); // log2(4) = 2
+    }
+
+    #[test]
     fn test_stevens_exponent_serde_roundtrip() {
         let exp = StevensExponent::Loudness;
         let json = serde_json::to_string(&exp).unwrap();

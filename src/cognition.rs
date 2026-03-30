@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::error::{Result, validate_finite, validate_non_negative, validate_positive};
+use crate::error::{Result, validate_non_negative, validate_positive};
 
 /// Working memory model based on Baddeley's multicomponent model.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -62,11 +62,13 @@ impl Default for DualProcess {
 
 impl DualProcess {
     /// Speed ratio: how much faster System 1 is than System 2.
+    ///
+    /// Returns `f64::INFINITY` if `system1_speed_ms` is zero (infinitely fast).
     #[inline]
     #[must_use]
     pub fn speed_ratio(&self) -> f64 {
         if self.system1_speed_ms == 0.0 {
-            return 0.0;
+            return f64::INFINITY;
         }
         self.system2_speed_ms / self.system1_speed_ms
     }
@@ -107,7 +109,11 @@ pub fn cognitive_load(task_loads: &[(f64, f64)], working_memory_capacity: f64) -
 #[must_use = "returns filtered stimuli indices without side effects"]
 pub fn attention_bottleneck(salience_scores: &[f64], capacity: usize) -> Result<Vec<usize>> {
     for (i, s) in salience_scores.iter().enumerate() {
-        validate_finite(*s, &format!("salience[{i}]"))?;
+        if !s.is_finite() {
+            return Err(crate::BodhError::InvalidParameter(format!(
+                "salience[{i}] must be finite, got {s}"
+            )));
+        }
     }
     let mut indexed: Vec<(usize, f64)> = salience_scores.iter().copied().enumerate().collect();
     indexed.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(core::cmp::Ordering::Equal));
@@ -182,6 +188,34 @@ mod tests {
             wm.phonological_loop_capacity,
             back.phonological_loop_capacity
         );
+    }
+
+    #[test]
+    fn test_dual_process_speed_ratio_zero_system1() {
+        let dp = DualProcess {
+            system1_speed_ms: 0.0,
+            system2_speed_ms: 2000.0,
+        };
+        assert!(dp.speed_ratio().is_infinite());
+    }
+
+    #[test]
+    fn test_cognitive_load_zero_capacity() {
+        let tasks = vec![(0.3, 0.1)];
+        assert!(cognitive_load(&tasks, 0.0).is_err());
+    }
+
+    #[test]
+    fn test_cognitive_load_empty_tasks() {
+        let tasks: Vec<(f64, f64)> = vec![];
+        let load = cognitive_load(&tasks, 1.0).unwrap();
+        assert!((load - 0.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_attention_bottleneck_nan_salience() {
+        let salience = vec![0.5, f64::NAN, 0.3];
+        assert!(attention_bottleneck(&salience, 2).is_err());
     }
 
     #[test]

@@ -248,4 +248,25 @@ mod tests {
         assert!((w0 - 0.0).abs() < 1e-10);
         assert!((w1 - 1.0).abs() < 1e-10);
     }
+
+    #[test]
+    fn test_probability_weighting_overweights_small() {
+        // Small probabilities should be overweighted: w(0.05) > 0.05.
+        let w = probability_weighting(0.05, 0.61).unwrap();
+        assert!(w > 0.05);
+    }
+
+    #[test]
+    fn test_probability_weighting_underweights_moderate() {
+        // Moderate-to-high probabilities should be underweighted: w(0.9) < 0.9.
+        let w = probability_weighting(0.9, 0.61).unwrap();
+        assert!(w < 0.9);
+    }
+
+    #[test]
+    fn test_probability_weighting_invalid() {
+        assert!(probability_weighting(-0.1, 0.61).is_err());
+        assert!(probability_weighting(1.1, 0.61).is_err());
+        assert!(probability_weighting(0.5, 0.0).is_err());
+    }
 }

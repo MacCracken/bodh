@@ -223,6 +223,13 @@ mod tests {
     }
 
     #[test]
+    fn test_cronbachs_alpha_zero_variance() {
+        // All identical scores → zero total variance → error.
+        let items = vec![vec![3.0, 3.0, 3.0], vec![3.0, 3.0, 3.0]];
+        assert!(cronbachs_alpha(&items).is_err());
+    }
+
+    #[test]
     fn test_cronbachs_alpha_too_few_items() {
         let items = vec![vec![1.0, 2.0, 3.0]];
         assert!(cronbachs_alpha(&items).is_err());
