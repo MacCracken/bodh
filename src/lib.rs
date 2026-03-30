@@ -14,6 +14,10 @@
 //! - [`perception`] — Signal detection theory (d'), Gestalt principles
 //! - [`psychometrics`] — Cronbach's alpha, reliability, Big Five measurement
 //! - [`development`] — Piaget stages, Erikson stages
+//! - [`emotion`] — Russell circumplex, Ekman basic emotions, appraisal, regulation
+//! - [`memory`] — ACT-R base-level activation, spreading activation, retrieval
+//! - [`bayesian`] — Bayes' theorem, belief updating, base rate neglect
+//! - [`social`] — Asch conformity, social impact, attribution, comparison
 //!
 //! ## Example
 //!
@@ -31,13 +35,17 @@
 
 #![warn(missing_docs)]
 
+pub mod bayesian;
 pub mod cognition;
 pub mod decision;
 pub mod development;
+pub mod emotion;
 pub mod error;
 pub mod learning;
+pub mod memory;
 pub mod perception;
 pub mod psychometrics;
 pub mod psychophysics;
+pub mod social;
 
 pub use error::BodhError;

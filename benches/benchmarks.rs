@@ -117,6 +117,76 @@ fn bench_criterion_c(c: &mut Criterion) {
     });
 }
 
+fn bench_yerkes_dodson(c: &mut Criterion) {
+    c.bench_function("emotion/yerkes_dodson", |b| {
+        b.iter(|| bodh::emotion::yerkes_dodson(black_box(0.7), black_box(0.5), black_box(0.4)))
+    });
+}
+
+fn bench_appraise(c: &mut Criterion) {
+    let dims = bodh::emotion::AppraisalDimensions {
+        novelty: 0.8,
+        pleasantness: 0.6,
+        goal_conduciveness: 0.4,
+        coping_potential: 0.3,
+        norm_compatibility: 0.5,
+    };
+    c.bench_function("emotion/appraise", |b| {
+        b.iter(|| bodh::emotion::appraise(black_box(&dims)))
+    });
+}
+
+fn bench_base_level_activation(c: &mut Criterion) {
+    let history = bodh::memory::ChunkHistory {
+        presentation_ages: vec![1.0, 5.0, 20.0, 60.0, 300.0],
+    };
+    c.bench_function("memory/base_level_activation", |b| {
+        b.iter(|| bodh::memory::base_level_activation(black_box(&history), black_box(0.5)))
+    });
+}
+
+fn bench_retrieval_probability(c: &mut Criterion) {
+    c.bench_function("memory/retrieval_probability", |b| {
+        b.iter(|| {
+            bodh::memory::retrieval_probability(black_box(1.5), black_box(0.0), black_box(0.4))
+        })
+    });
+}
+
+fn bench_bayes_posterior(c: &mut Criterion) {
+    c.bench_function("bayesian/bayes_posterior", |b| {
+        b.iter(|| {
+            bodh::bayesian::bayes_posterior(black_box(0.01), black_box(0.99), black_box(0.05))
+        })
+    });
+}
+
+fn bench_sequential_update(c: &mut Criterion) {
+    let evidence = vec![(0.9, 0.1), (0.8, 0.2), (0.7, 0.3)];
+    c.bench_function("bayesian/sequential_update", |b| {
+        b.iter(|| bodh::bayesian::sequential_update(black_box(0.5), black_box(&evidence)))
+    });
+}
+
+fn bench_asch_conformity(c: &mut Criterion) {
+    c.bench_function("social/asch_conformity", |b| {
+        b.iter(|| {
+            bodh::social::asch_conformity(
+                black_box(5),
+                black_box(1.0),
+                black_box(0.37),
+                black_box(0.3),
+            )
+        })
+    });
+}
+
+fn bench_social_impact(c: &mut Criterion) {
+    c.bench_function("social/social_impact", |b| {
+        b.iter(|| bodh::social::social_impact(black_box(10.0), black_box(5), black_box(0.5)))
+    });
+}
+
 criterion_group!(
     benches,
     bench_weber_fechner,
@@ -133,5 +203,13 @@ criterion_group!(
     bench_probability_weighting,
     bench_cronbachs_alpha,
     bench_criterion_c,
+    bench_yerkes_dodson,
+    bench_appraise,
+    bench_base_level_activation,
+    bench_retrieval_probability,
+    bench_bayes_posterior,
+    bench_sequential_update,
+    bench_asch_conformity,
+    bench_social_impact,
 );
 criterion_main!(benches);
