@@ -1,8 +1,11 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
+use std::hint::black_box;
 
 fn bench_weber_fechner(c: &mut Criterion) {
     c.bench_function("psychophysics/weber_fechner", |b| {
-        b.iter(|| bodh::psychophysics::weber_fechner(black_box(200.0), black_box(100.0), black_box(1.0)))
+        b.iter(|| {
+            bodh::psychophysics::weber_fechner(black_box(200.0), black_box(100.0), black_box(1.0))
+        })
     });
 }
 

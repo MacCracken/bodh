@@ -4,7 +4,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::error::{validate_finite, validate_positive, BodhError, Result};
+use crate::error::{BodhError, Result, validate_finite, validate_positive};
 
 /// Weber-Fechner law: perceived intensity as logarithmic function of stimulus.
 ///

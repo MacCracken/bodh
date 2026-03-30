@@ -119,7 +119,10 @@ mod tests {
     #[test]
     fn test_piaget_from_age() {
         assert_eq!(PiagetStage::from_age(0.5), Some(PiagetStage::Sensorimotor));
-        assert_eq!(PiagetStage::from_age(4.0), Some(PiagetStage::Preoperational));
+        assert_eq!(
+            PiagetStage::from_age(4.0),
+            Some(PiagetStage::Preoperational)
+        );
         assert_eq!(
             PiagetStage::from_age(9.0),
             Some(PiagetStage::ConcreteOperational)

@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::error::{validate_finite, validate_non_negative, validate_positive, BodhError, Result};
+use crate::error::{Result, validate_finite, validate_non_negative, validate_positive};
 
 /// Working memory model based on Baddeley's multicomponent model.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -81,13 +81,10 @@ impl DualProcess {
 ///
 /// # Errors
 ///
-/// Returns [`BodhError::InvalidParameter`] if any load value is non-finite
+/// Returns [`crate::BodhError::InvalidParameter`] if any load value is non-finite
 /// or capacity is zero.
 #[must_use = "returns the cognitive load ratio without side effects"]
-pub fn cognitive_load(
-    task_loads: &[(f64, f64)],
-    working_memory_capacity: f64,
-) -> Result<f64> {
+pub fn cognitive_load(task_loads: &[(f64, f64)], working_memory_capacity: f64) -> Result<f64> {
     validate_positive(working_memory_capacity, "working_memory_capacity")?;
     let mut total = 0.0;
     for (intrinsic, extraneous) in task_loads {
@@ -106,26 +103,17 @@ pub fn cognitive_load(
 ///
 /// # Errors
 ///
-/// Returns [`BodhError::InvalidParameter`] if any salience is non-finite.
+/// Returns [`crate::BodhError::InvalidParameter`] if any salience is non-finite.
 #[must_use = "returns filtered stimuli indices without side effects"]
-pub fn attention_bottleneck(
-    salience_scores: &[f64],
-    capacity: usize,
-) -> Result<Vec<usize>> {
+pub fn attention_bottleneck(salience_scores: &[f64], capacity: usize) -> Result<Vec<usize>> {
     for (i, s) in salience_scores.iter().enumerate() {
-        validate_finite(*s, &alloc::format!("salience[{i}]"))?;
+        validate_finite(*s, &format!("salience[{i}]"))?;
     }
-    let mut indexed: Vec<(usize, f64)> = salience_scores
-        .iter()
-        .copied()
-        .enumerate()
-        .collect();
+    let mut indexed: Vec<(usize, f64)> = salience_scores.iter().copied().enumerate().collect();
     indexed.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(core::cmp::Ordering::Equal));
     indexed.truncate(capacity);
     Ok(indexed.into_iter().map(|(i, _)| i).collect())
 }
-
-extern crate alloc;
 
 #[cfg(test)]
 mod tests {
@@ -190,7 +178,10 @@ mod tests {
         let wm = WorkingMemory::default();
         let json = serde_json::to_string(&wm).unwrap();
         let back: WorkingMemory = serde_json::from_str(&json).unwrap();
-        assert_eq!(wm.phonological_loop_capacity, back.phonological_loop_capacity);
+        assert_eq!(
+            wm.phonological_loop_capacity,
+            back.phonological_loop_capacity
+        );
     }
 
     #[test]

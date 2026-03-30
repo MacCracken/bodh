@@ -1,8 +1,6 @@
 //! Decision-making — prospect theory, expected utility, bounded rationality.
 
-use serde::{Deserialize, Serialize};
-
-use crate::error::{validate_finite, validate_positive, BodhError, Result};
+use crate::error::{BodhError, Result, validate_finite, validate_positive};
 
 /// Prospect theory value function (Kahneman & Tversky, 1979).
 ///

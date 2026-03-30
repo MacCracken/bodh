@@ -29,10 +29,7 @@
 //! assert!((retention - 1.0).abs() < 1e-10); // perfect at t=0
 //! ```
 
-#![cfg_attr(not(feature = "std"), no_std)]
 #![warn(missing_docs)]
-
-extern crate alloc;
 
 pub mod cognition;
 pub mod decision;

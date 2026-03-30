@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::error::{validate_finite, BodhError, Result};
+use crate::error::{BodhError, Result, validate_finite};
 
 /// Signal detection theory parameters.
 #[derive(Debug, Clone, Serialize, Deserialize)]

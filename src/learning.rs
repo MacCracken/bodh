@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::error::{validate_finite, validate_non_negative, validate_positive, BodhError, Result};
+use crate::error::{BodhError, Result, validate_finite, validate_non_negative, validate_positive};
 
 /// Ebbinghaus forgetting curve: retention as a function of time.
 ///

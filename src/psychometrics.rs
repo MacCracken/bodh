@@ -4,10 +4,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::error::{validate_positive, BodhError, Result};
-
-extern crate alloc;
-use alloc::vec::Vec;
+use crate::error::{BodhError, Result};
 
 /// An item response with score and confidence.
 #[derive(Debug, Clone, Serialize, Deserialize)]
