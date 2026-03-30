@@ -15,7 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `social` module — Asch conformity, Latané social impact theory, Kelley covariation attribution, fundamental attribution error, Festinger social comparison
 - `fitts_law_shannon` / `fitts_law_shannon_full` — ISO 9241-411 Shannon formulation of Fitts' law
 - Reference-value tests verified against published academic sources (TK92, A&S 26.2.23, z-tables)
-- 8 new benchmarks for v0.2.0 modules (22 total)
+- `motivation` module — self-determination theory (basic needs, autonomy index), expectancy-value theory, Csikszentmihalyi flow state, goal gradient effect
+- `attention` module — Posner cueing (valid/invalid/neutral), inhibition of return, visual search (feature/conjunction), attentional blink, capacity throughput
+- `irt` module — Item Response Theory: 1PL (Rasch), 2PL, 3PL models, item/test information functions, ability standard error
+- `bridge` module — cross-crate bridges for pramana statistics: t-stat→d'/Cohen's d, variance→reliability/arousal, regression→learning rate, posterior→odds, F-stat→eta², z-score→valence
 
 ### Changed
 

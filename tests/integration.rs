@@ -1,10 +1,13 @@
 //! Integration tests for bodh.
 
+use bodh::attention;
 use bodh::bayesian;
 use bodh::decision;
 use bodh::emotion;
+use bodh::irt;
 use bodh::learning;
 use bodh::memory;
+use bodh::motivation;
 use bodh::perception;
 use bodh::psychophysics;
 use bodh::social;
@@ -145,4 +148,99 @@ fn test_attribution_with_bias() {
         social::kelley_attribution(&biased),
         social::AttributionType::Internal
     );
+}
+
+// -- Motivation --
+
+#[test]
+fn test_sdt_needs_drive_motivation() {
+    let high = motivation::BasicNeeds {
+        autonomy: 0.9,
+        competence: 0.9,
+        relatedness: 0.9,
+    };
+    let low = motivation::BasicNeeds {
+        autonomy: 0.1,
+        competence: 0.1,
+        relatedness: 0.1,
+    };
+    assert!(motivation::predict_motivation(&high) > motivation::predict_motivation(&low));
+}
+
+#[test]
+fn test_flow_requires_skill_challenge_match() {
+    let flow = motivation::flow_state(0.8, 0.8).unwrap();
+    let anxiety = motivation::flow_state(0.8, 0.2).unwrap();
+    let boredom = motivation::flow_state(0.2, 0.8).unwrap();
+    assert!(flow > anxiety);
+    assert!(flow > boredom);
+}
+
+#[test]
+fn test_goal_gradient_accelerates() {
+    let early = motivation::goal_gradient(0.1, 1.0, 1.5).unwrap();
+    let mid = motivation::goal_gradient(0.5, 1.0, 1.5).unwrap();
+    let late = motivation::goal_gradient(0.9, 1.0, 1.5).unwrap();
+    assert!(mid > early);
+    assert!(late > mid);
+}
+
+// -- Attention --
+
+#[test]
+fn test_posner_cueing_asymmetry() {
+    let benefit = 30.0;
+    let cost = 50.0;
+    // Cost > benefit is the standard finding.
+    assert!(cost > benefit);
+    let valid =
+        attention::posner_cueing_rt(300.0, attention::CueValidity::Valid, benefit, cost).unwrap();
+    let invalid =
+        attention::posner_cueing_rt(300.0, attention::CueValidity::Invalid, benefit, cost).unwrap();
+    assert!((invalid - valid - (benefit + cost)).abs() < 1e-10);
+}
+
+#[test]
+fn test_visual_search_feature_vs_conjunction() {
+    let feat =
+        attention::visual_search_rt(attention::SearchType::Feature, 20, 400.0, 25.0, true).unwrap();
+    let conj =
+        attention::visual_search_rt(attention::SearchType::Conjunction, 20, 400.0, 25.0, true)
+            .unwrap();
+    assert!(conj > feat); // conjunction search is slower
+}
+
+#[test]
+fn test_attentional_blink_recovery() {
+    let lag2 = attention::attentional_blink(2, 0.95, 0.4, 3.0, 1.5).unwrap();
+    let lag8 = attention::attentional_blink(8, 0.95, 0.4, 3.0, 1.5).unwrap();
+    assert!(lag8 > lag2); // recovery from blink
+}
+
+// -- IRT --
+
+#[test]
+fn test_irt_3pl_bounds() {
+    // 3PL: low ability → guessing, high ability → ~1.0.
+    let low = irt::three_pl_probability(-5.0, 0.0, 1.0, 0.25).unwrap();
+    let high = irt::three_pl_probability(5.0, 0.0, 1.0, 0.25).unwrap();
+    assert!((low - 0.25).abs() < 0.01);
+    assert!((high - 1.0).abs() < 0.01);
+}
+
+#[test]
+fn test_irt_information_peaks_at_difficulty() {
+    let at_b = irt::item_information_2pl(0.0, 0.0, 1.5).unwrap();
+    let away = irt::item_information_2pl(3.0, 0.0, 1.5).unwrap();
+    assert!(at_b > away);
+}
+
+#[test]
+fn test_irt_test_information_additive() {
+    let items = vec![(-1.0, 1.0), (0.0, 1.5), (1.0, 1.0)];
+    let ti = irt::test_information_2pl(0.0, &items).unwrap();
+    assert!(ti > 0.0);
+    let se = irt::ability_standard_error(ti).unwrap();
+    assert!(se > 0.0);
+    assert!(se < 2.0); // 3 items give moderate precision
 }

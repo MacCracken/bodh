@@ -18,6 +18,10 @@
 //! - [`memory`] — ACT-R base-level activation, spreading activation, retrieval
 //! - [`bayesian`] — Bayes' theorem, belief updating, base rate neglect
 //! - [`social`] — Asch conformity, social impact, attribution, comparison
+//! - [`motivation`] — Self-determination theory, expectancy-value, flow state
+//! - [`attention`] — Posner cueing, feature integration, attentional blink
+//! - [`irt`] — Item Response Theory (1PL/2PL/3PL), information functions
+//! - [`bridge`] — Cross-crate bridges for pramana statistics integration
 //!
 //! ## Example
 //!
@@ -35,14 +39,18 @@
 
 #![warn(missing_docs)]
 
+pub mod attention;
 pub mod bayesian;
+pub mod bridge;
 pub mod cognition;
 pub mod decision;
 pub mod development;
 pub mod emotion;
 pub mod error;
+pub mod irt;
 pub mod learning;
 pub mod memory;
+pub mod motivation;
 pub mod perception;
 pub mod psychometrics;
 pub mod psychophysics;

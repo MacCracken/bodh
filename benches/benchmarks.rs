@@ -187,6 +187,91 @@ fn bench_social_impact(c: &mut Criterion) {
     });
 }
 
+fn bench_flow_state(c: &mut Criterion) {
+    c.bench_function("motivation/flow_state", |b| {
+        b.iter(|| bodh::motivation::flow_state(black_box(0.7), black_box(0.8)))
+    });
+}
+
+fn bench_goal_gradient(c: &mut Criterion) {
+    c.bench_function("motivation/goal_gradient", |b| {
+        b.iter(|| bodh::motivation::goal_gradient(black_box(0.7), black_box(1.0), black_box(1.5)))
+    });
+}
+
+fn bench_posner_cueing(c: &mut Criterion) {
+    c.bench_function("attention/posner_cueing_rt", |b| {
+        b.iter(|| {
+            bodh::attention::posner_cueing_rt(
+                black_box(300.0),
+                black_box(bodh::attention::CueValidity::Valid),
+                black_box(30.0),
+                black_box(50.0),
+            )
+        })
+    });
+}
+
+fn bench_visual_search(c: &mut Criterion) {
+    c.bench_function("attention/visual_search_rt", |b| {
+        b.iter(|| {
+            bodh::attention::visual_search_rt(
+                black_box(bodh::attention::SearchType::Conjunction),
+                black_box(20),
+                black_box(400.0),
+                black_box(25.0),
+                black_box(true),
+            )
+        })
+    });
+}
+
+fn bench_attentional_blink(c: &mut Criterion) {
+    c.bench_function("attention/attentional_blink", |b| {
+        b.iter(|| {
+            bodh::attention::attentional_blink(
+                black_box(3),
+                black_box(0.95),
+                black_box(0.4),
+                black_box(3.0),
+                black_box(1.5),
+            )
+        })
+    });
+}
+
+fn bench_rasch(c: &mut Criterion) {
+    c.bench_function("irt/rasch_probability", |b| {
+        b.iter(|| bodh::irt::rasch_probability(black_box(1.0), black_box(0.5)))
+    });
+}
+
+fn bench_3pl(c: &mut Criterion) {
+    c.bench_function("irt/three_pl_probability", |b| {
+        b.iter(|| {
+            bodh::irt::three_pl_probability(
+                black_box(1.0),
+                black_box(0.5),
+                black_box(1.5),
+                black_box(0.25),
+            )
+        })
+    });
+}
+
+fn bench_item_info(c: &mut Criterion) {
+    c.bench_function("irt/item_information_2pl", |b| {
+        b.iter(|| bodh::irt::item_information_2pl(black_box(0.0), black_box(0.0), black_box(1.5)))
+    });
+}
+
+fn bench_test_info(c: &mut Criterion) {
+    let items = vec![(-1.0, 1.0), (0.0, 1.5), (1.0, 1.0), (0.5, 2.0), (-0.5, 1.2)];
+    c.bench_function("irt/test_information_2pl", |b| {
+        b.iter(|| bodh::irt::test_information_2pl(black_box(0.0), black_box(&items)))
+    });
+}
+
 criterion_group!(
     benches,
     bench_weber_fechner,
@@ -211,5 +296,14 @@ criterion_group!(
     bench_sequential_update,
     bench_asch_conformity,
     bench_social_impact,
+    bench_flow_state,
+    bench_goal_gradient,
+    bench_posner_cueing,
+    bench_visual_search,
+    bench_attentional_blink,
+    bench_rasch,
+    bench_3pl,
+    bench_item_info,
+    bench_test_info,
 );
 criterion_main!(benches);
