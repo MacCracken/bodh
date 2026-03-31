@@ -156,6 +156,143 @@ pub fn partial_matching(slot_penalties: &[(f64, f64)]) -> Result<f64> {
     Ok(total)
 }
 
+// ---------------------------------------------------------------------------
+// Levels of Processing (Craik & Lockhart, 1972)
+// ---------------------------------------------------------------------------
+
+/// Processing depth from Craik & Lockhart's levels-of-processing framework.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[non_exhaustive]
+pub enum ProcessingLevel {
+    /// Structural/physical features (shallowest).
+    Structural,
+    /// Phonological/acoustic features.
+    Phonological,
+    /// Semantic/meaning-based features (deepest).
+    Semantic,
+}
+
+impl ProcessingLevel {
+    /// Encoding strength multiplier for this processing level.
+    ///
+    /// Deeper processing produces stronger, more durable memory traces.
+    /// Based on typical levels-of-processing effect sizes.
+    #[inline]
+    #[must_use]
+    pub fn encoding_strength(self) -> f64 {
+        match self {
+            Self::Structural => 0.3,
+            Self::Phonological => 0.5,
+            Self::Semantic => 1.0,
+        }
+    }
+}
+
+/// Encoding strength: memory trace strength as a function of
+/// processing depth and elaboration.
+///
+/// `strength = level_strength × (1 + elaboration) × distinctiveness`
+///
+/// where `elaboration` (0+) captures the richness of encoding
+/// (number of associations formed) and `distinctiveness` (0–1)
+/// captures how unique the encoding is relative to other items.
+///
+/// # Errors
+///
+/// Returns [`BodhError::InvalidParameter`] if inputs are non-finite.
+#[inline]
+#[must_use = "returns the encoding strength without side effects"]
+pub fn encoding_strength(
+    level: ProcessingLevel,
+    elaboration: f64,
+    distinctiveness: f64,
+) -> Result<f64> {
+    validate_finite(elaboration, "elaboration")?;
+    validate_finite(distinctiveness, "distinctiveness")?;
+    let elab = elaboration.max(0.0);
+    let dist = distinctiveness.clamp(0.0, 1.0);
+    Ok(level.encoding_strength() * (1.0 + elab) * dist)
+}
+
+/// Generation effect: items self-generated during encoding are
+/// remembered better than items simply read.
+///
+/// `retention_boost = base_retention × (1 + generation_weight × generated)`
+///
+/// where `generated` is 1.0 if the item was self-generated and 0.0
+/// if passively read. Typical generation effect ≈ 15–20% boost.
+///
+/// # Errors
+///
+/// Returns [`BodhError::InvalidParameter`] if inputs are non-finite.
+#[inline]
+#[must_use = "returns the boosted retention without side effects"]
+pub fn generation_effect(
+    base_retention: f64,
+    generated: bool,
+    generation_weight: f64,
+) -> Result<f64> {
+    validate_finite(base_retention, "base_retention")?;
+    validate_finite(generation_weight, "generation_weight")?;
+    let boost = if generated { generation_weight } else { 0.0 };
+    Ok((base_retention * (1.0 + boost)).clamp(0.0, 1.0))
+}
+
+/// Testing effect (retrieval practice): retrieving information
+/// strengthens memory more than restudying.
+///
+/// `new_strength = old_strength + retrieval_bonus × success × difficulty`
+///
+/// where `success` is 1.0 for successful retrieval (0.0 for failure),
+/// and `difficulty` (0–1) modulates the bonus (harder retrievals
+/// produce stronger strengthening — desirable difficulty).
+///
+/// # Errors
+///
+/// Returns [`BodhError::InvalidParameter`] if inputs are non-finite.
+#[inline]
+#[must_use = "returns the updated strength without side effects"]
+pub fn testing_effect(
+    old_strength: f64,
+    retrieval_bonus: f64,
+    success: bool,
+    difficulty: f64,
+) -> Result<f64> {
+    validate_finite(old_strength, "old_strength")?;
+    validate_finite(retrieval_bonus, "retrieval_bonus")?;
+    validate_finite(difficulty, "difficulty")?;
+    let diff = difficulty.clamp(0.0, 1.0);
+    let bonus = if success { retrieval_bonus * diff } else { 0.0 };
+    Ok(old_strength + bonus)
+}
+
+/// Encoding specificity (Tulving & Thomson, 1973): retrieval
+/// probability depends on match between encoding and retrieval contexts.
+///
+/// `P(recall) = base_probability × context_match^specificity`
+///
+/// where `context_match` (0–1) is the overlap between encoding and
+/// retrieval contexts, and `specificity` controls how sharply
+/// performance drops with mismatch (typically 1.0–3.0).
+///
+/// # Errors
+///
+/// Returns [`BodhError::InvalidParameter`] if inputs are non-finite or
+/// `specificity` is non-positive.
+#[inline]
+#[must_use = "returns the recall probability without side effects"]
+pub fn encoding_specificity(
+    base_probability: f64,
+    context_match: f64,
+    specificity: f64,
+) -> Result<f64> {
+    validate_finite(base_probability, "base_probability")?;
+    validate_finite(context_match, "context_match")?;
+    validate_positive(specificity, "specificity")?;
+    let cm = context_match.clamp(0.0, 1.0);
+    Ok((base_probability * cm.powf(specificity)).clamp(0.0, 1.0))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -308,6 +445,80 @@ mod tests {
     fn test_partial_matching_invalid_similarity() {
         assert!(partial_matching(&[(1.0, 0.5)]).is_err()); // > 0
         assert!(partial_matching(&[(1.0, -1.5)]).is_err()); // < -1
+    }
+
+    // -- Serde roundtrips --
+
+    // -- Levels of processing / Encoding --
+
+    #[test]
+    fn test_processing_level_ordering() {
+        assert!(ProcessingLevel::Semantic > ProcessingLevel::Phonological);
+        assert!(ProcessingLevel::Phonological > ProcessingLevel::Structural);
+    }
+
+    #[test]
+    fn test_encoding_strength_deeper_better() {
+        let shallow = encoding_strength(ProcessingLevel::Structural, 0.0, 1.0).unwrap();
+        let deep = encoding_strength(ProcessingLevel::Semantic, 0.0, 1.0).unwrap();
+        assert!(deep > shallow);
+    }
+
+    #[test]
+    fn test_encoding_strength_elaboration_boosts() {
+        let plain = encoding_strength(ProcessingLevel::Semantic, 0.0, 1.0).unwrap();
+        let elab = encoding_strength(ProcessingLevel::Semantic, 2.0, 1.0).unwrap();
+        assert!(elab > plain);
+    }
+
+    #[test]
+    fn test_generation_effect_boost() {
+        let read = generation_effect(0.5, false, 0.2).unwrap();
+        let generated = generation_effect(0.5, true, 0.2).unwrap();
+        assert!((read - 0.5).abs() < 1e-10);
+        assert!(generated > read);
+    }
+
+    #[test]
+    fn test_testing_effect_success() {
+        let before = 0.5;
+        let after = testing_effect(before, 0.3, true, 0.8).unwrap();
+        assert!(after > before);
+    }
+
+    #[test]
+    fn test_testing_effect_failure() {
+        let before = 0.5;
+        let after = testing_effect(before, 0.3, false, 0.8).unwrap();
+        assert!((after - before).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_testing_effect_difficulty_modulates() {
+        let easy = testing_effect(0.5, 0.3, true, 0.2).unwrap();
+        let hard = testing_effect(0.5, 0.3, true, 0.9).unwrap();
+        assert!(hard > easy); // desirable difficulty
+    }
+
+    #[test]
+    fn test_encoding_specificity_perfect_match() {
+        let p = encoding_specificity(0.8, 1.0, 2.0).unwrap();
+        assert!((p - 0.8).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_encoding_specificity_mismatch_drops() {
+        let matched = encoding_specificity(0.8, 1.0, 2.0).unwrap();
+        let mismatched = encoding_specificity(0.8, 0.5, 2.0).unwrap();
+        assert!(matched > mismatched);
+    }
+
+    #[test]
+    fn test_processing_level_serde_roundtrip() {
+        let level = ProcessingLevel::Semantic;
+        let json = serde_json::to_string(&level).unwrap();
+        let back: ProcessingLevel = serde_json::from_str(&json).unwrap();
+        assert_eq!(level, back);
     }
 
     // -- Serde roundtrips --

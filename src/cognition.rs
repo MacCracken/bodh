@@ -121,6 +121,99 @@ pub fn attention_bottleneck(salience_scores: &[f64], capacity: usize) -> Result<
     Ok(indexed.into_iter().map(|(i, _)| i).collect())
 }
 
+// ---------------------------------------------------------------------------
+// Working Memory Updating (N-back, Complex Span)
+// ---------------------------------------------------------------------------
+
+/// N-back task performance: predicted accuracy as a function of n-level
+/// and working memory capacity.
+///
+/// `accuracy = capacity_factor × e^(-decay × (n - 1))`
+///
+/// where `capacity_factor = min(capacity / n, 1.0)` reflects the load
+/// relative to capacity, and `decay` controls how fast accuracy drops
+/// with increasing n (typically 0.3–0.5).
+///
+/// At n=1, accuracy ≈ capacity_factor (near ceiling for most people).
+/// At n=3+, accuracy drops substantially.
+///
+/// # Errors
+///
+/// Returns [`crate::BodhError::InvalidParameter`] if n is 0, capacity is
+/// non-positive, or decay is non-finite.
+#[must_use = "returns the predicted accuracy without side effects"]
+pub fn nback_accuracy(n: usize, capacity: f64, decay: f64) -> Result<f64> {
+    if n == 0 {
+        return Err(crate::BodhError::InvalidParameter(
+            "n must be at least 1".into(),
+        ));
+    }
+    validate_positive(capacity, "capacity")?;
+    crate::error::validate_finite(decay, "decay")?;
+
+    let capacity_factor = (capacity / n as f64).min(1.0);
+    let n_penalty = (-decay * (n as f64 - 1.0)).exp();
+    Ok((capacity_factor * n_penalty).clamp(0.0, 1.0))
+}
+
+/// Complex span capacity: effective capacity under concurrent
+/// processing demands.
+///
+/// `effective = storage_capacity × (1 − processing_demand) × efficiency`
+///
+/// where `storage_capacity` is the baseline (typically 3–5 items),
+/// `processing_demand` is the fraction of resources used by the
+/// processing task (0–1), and `efficiency` reflects individual
+/// differences in time-sharing ability (0–1, typical ≈ 0.7).
+///
+/// # Errors
+///
+/// Returns [`crate::BodhError::InvalidParameter`] if values are non-finite.
+#[inline]
+#[must_use = "returns the effective capacity without side effects"]
+pub fn complex_span_capacity(
+    storage_capacity: f64,
+    processing_demand: f64,
+    efficiency: f64,
+) -> Result<f64> {
+    validate_positive(storage_capacity, "storage_capacity")?;
+    crate::error::validate_finite(processing_demand, "processing_demand")?;
+    crate::error::validate_finite(efficiency, "efficiency")?;
+    let demand = processing_demand.clamp(0.0, 1.0);
+    let eff = efficiency.clamp(0.0, 1.0);
+    Ok(storage_capacity * (1.0 - demand) * eff)
+}
+
+/// Working memory updating cost: RT penalty for replacing an item
+/// in working memory with a new one.
+///
+/// `RT = base_rt + switch_cost × n_updates + interference × similarity`
+///
+/// where `n_updates` is how many items have been updated so far (proactive
+/// interference builds), and `similarity` (0–1) between old and new items
+/// increases interference.
+///
+/// # Errors
+///
+/// Returns [`crate::BodhError::InvalidParameter`] if inputs are non-finite
+/// or `base_rt` is non-positive.
+#[inline]
+#[must_use = "returns the updating RT without side effects"]
+pub fn updating_cost(
+    base_rt: f64,
+    switch_cost: f64,
+    n_updates: usize,
+    interference: f64,
+    similarity: f64,
+) -> Result<f64> {
+    validate_positive(base_rt, "base_rt")?;
+    crate::error::validate_finite(switch_cost, "switch_cost")?;
+    crate::error::validate_finite(interference, "interference")?;
+    crate::error::validate_finite(similarity, "similarity")?;
+    let sim = similarity.clamp(0.0, 1.0);
+    Ok(base_rt + switch_cost * n_updates as f64 + interference * sim)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -224,5 +317,68 @@ mod tests {
         let json = serde_json::to_string(&dp).unwrap();
         let back: DualProcess = serde_json::from_str(&json).unwrap();
         assert!((dp.system1_speed_ms - back.system1_speed_ms).abs() < 1e-10);
+    }
+
+    // -- Working memory updating --
+
+    #[test]
+    fn test_nback_1back_near_ceiling() {
+        let acc = nback_accuracy(1, 4.0, 0.4).unwrap();
+        assert!(acc > 0.9);
+    }
+
+    #[test]
+    fn test_nback_decreases_with_n() {
+        let a1 = nback_accuracy(1, 4.0, 0.4).unwrap();
+        let a2 = nback_accuracy(2, 4.0, 0.4).unwrap();
+        let a3 = nback_accuracy(3, 4.0, 0.4).unwrap();
+        assert!(a1 > a2);
+        assert!(a2 > a3);
+    }
+
+    #[test]
+    fn test_nback_higher_capacity_better() {
+        // Use n=5 so capacity differences matter (cap/n < 1.0 for low cap).
+        let low = nback_accuracy(5, 3.0, 0.4).unwrap();
+        let high = nback_accuracy(5, 7.0, 0.4).unwrap();
+        assert!(high > low);
+    }
+
+    #[test]
+    fn test_nback_zero_n() {
+        assert!(nback_accuracy(0, 4.0, 0.4).is_err());
+    }
+
+    #[test]
+    fn test_complex_span_no_demand() {
+        let cap = complex_span_capacity(4.0, 0.0, 1.0).unwrap();
+        assert!((cap - 4.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_complex_span_full_demand() {
+        let cap = complex_span_capacity(4.0, 1.0, 1.0).unwrap();
+        assert!(cap.abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_complex_span_typical() {
+        // 4 items, 50% processing, 70% efficiency → 4 × 0.5 × 0.7 = 1.4
+        let cap = complex_span_capacity(4.0, 0.5, 0.7).unwrap();
+        assert!((cap - 1.4).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_updating_cost_no_updates() {
+        let rt = updating_cost(300.0, 50.0, 0, 100.0, 0.5).unwrap();
+        // base + 0 switches + 100*0.5 = 350
+        assert!((rt - 350.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_updating_cost_increases() {
+        let rt0 = updating_cost(300.0, 50.0, 0, 100.0, 0.5).unwrap();
+        let rt3 = updating_cost(300.0, 50.0, 3, 100.0, 0.5).unwrap();
+        assert!(rt3 > rt0);
     }
 }

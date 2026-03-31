@@ -272,6 +272,66 @@ fn bench_test_info(c: &mut Criterion) {
     });
 }
 
+fn bench_nback(c: &mut Criterion) {
+    c.bench_function("cognition/nback_accuracy", |b| {
+        b.iter(|| bodh::cognition::nback_accuracy(black_box(3), black_box(4.0), black_box(0.4)))
+    });
+}
+
+fn bench_encoding_strength(c: &mut Criterion) {
+    c.bench_function("memory/encoding_strength", |b| {
+        b.iter(|| {
+            bodh::memory::encoding_strength(
+                black_box(bodh::memory::ProcessingLevel::Semantic),
+                black_box(1.5),
+                black_box(0.8),
+            )
+        })
+    });
+}
+
+fn bench_stress_intensity(c: &mut Criterion) {
+    let secondary = bodh::stress::SecondaryAppraisal {
+        perceived_control: 0.3,
+        coping_resources: 0.4,
+        self_efficacy: 0.5,
+    };
+    c.bench_function("stress/stress_intensity", |b| {
+        b.iter(|| {
+            bodh::stress::stress_intensity(
+                black_box(bodh::stress::PrimaryAppraisal::Threat),
+                black_box(&secondary),
+            )
+        })
+    });
+}
+
+fn bench_burnout_risk(c: &mut Criterion) {
+    c.bench_function("stress/burnout_risk", |b| {
+        b.iter(|| bodh::stress::burnout_risk(black_box(0.7), black_box(5.0), black_box(1.0)))
+    });
+}
+
+fn bench_profile_distance(c: &mut Criterion) {
+    let a = bodh::psychometrics::BigFiveProfile {
+        openness: 3.5,
+        conscientiousness: 4.0,
+        extraversion: 2.5,
+        agreeableness: 3.8,
+        neuroticism: 2.0,
+    };
+    let b = bodh::psychometrics::BigFiveProfile {
+        openness: 4.0,
+        conscientiousness: 3.0,
+        extraversion: 3.5,
+        agreeableness: 2.8,
+        neuroticism: 3.0,
+    };
+    c.bench_function("psychometrics/profile_distance", |b_iter| {
+        b_iter.iter(|| bodh::psychometrics::profile_distance(black_box(&a), black_box(&b)))
+    });
+}
+
 criterion_group!(
     benches,
     bench_weber_fechner,
@@ -305,5 +365,10 @@ criterion_group!(
     bench_3pl,
     bench_item_info,
     bench_test_info,
+    bench_nback,
+    bench_encoding_strength,
+    bench_stress_intensity,
+    bench_burnout_risk,
+    bench_profile_distance,
 );
 criterion_main!(benches);

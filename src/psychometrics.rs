@@ -147,6 +147,123 @@ pub fn likert_midpoint(min: u32, max: u32) -> f64 {
     (min as f64 + max as f64) / 2.0
 }
 
+// ---------------------------------------------------------------------------
+// Big Five Scoring & Norming
+// ---------------------------------------------------------------------------
+
+/// Big Five trait profile: scores on each dimension.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct BigFiveProfile {
+    /// Openness to experience (raw score).
+    pub openness: f64,
+    /// Conscientiousness (raw score).
+    pub conscientiousness: f64,
+    /// Extraversion (raw score).
+    pub extraversion: f64,
+    /// Agreeableness (raw score).
+    pub agreeableness: f64,
+    /// Neuroticism (raw score).
+    pub neuroticism: f64,
+}
+
+/// Score a Big Five dimension from item responses.
+///
+/// Items can be positively or negatively keyed. For reverse-scored items,
+/// pass the `max_score` (e.g., 5 for a 1–5 Likert scale) and the item
+/// indices that are reverse-scored.
+///
+/// `score = mean(adjusted_items)`
+///
+/// # Errors
+///
+/// Returns [`BodhError::MeasurementError`] if items are empty.
+#[must_use = "returns the dimension score without side effects"]
+pub fn score_dimension(items: &[f32], reverse_keyed: &[usize], max_score: f32) -> Result<f64> {
+    if items.is_empty() {
+        return Err(BodhError::MeasurementError(
+            "need at least 1 item to score".into(),
+        ));
+    }
+    let mut total = 0.0_f64;
+    for (i, &score) in items.iter().enumerate() {
+        let adjusted = if reverse_keyed.contains(&i) {
+            (max_score + 1.0 - score) as f64
+        } else {
+            score as f64
+        };
+        total += adjusted;
+    }
+    Ok(total / items.len() as f64)
+}
+
+/// Convert a raw score to a T-score using population norms.
+///
+/// `T = 50 + 10 × (raw − mean) / std_dev`
+///
+/// T-scores have mean 50 and SD 10 in the norming population.
+///
+/// # Errors
+///
+/// Returns [`BodhError::InvalidParameter`] if `std_dev` is non-positive.
+#[inline]
+#[must_use = "returns the T-score without side effects"]
+pub fn raw_to_t_score(raw: f64, norm_mean: f64, norm_std: f64) -> Result<f64> {
+    crate::error::validate_finite(raw, "raw")?;
+    crate::error::validate_finite(norm_mean, "norm_mean")?;
+    crate::error::validate_positive(norm_std, "norm_std")?;
+    Ok(50.0 + 10.0 * (raw - norm_mean) / norm_std)
+}
+
+/// Euclidean distance between two Big Five profiles.
+///
+/// Useful for measuring personality similarity between individuals
+/// or between an individual and a prototype.
+#[inline]
+#[must_use]
+pub fn profile_distance(a: &BigFiveProfile, b: &BigFiveProfile) -> f64 {
+    let d_o = a.openness - b.openness;
+    let d_c = a.conscientiousness - b.conscientiousness;
+    let d_e = a.extraversion - b.extraversion;
+    let d_a = a.agreeableness - b.agreeableness;
+    let d_n = a.neuroticism - b.neuroticism;
+    (d_o * d_o + d_c * d_c + d_e * d_e + d_a * d_a + d_n * d_n).sqrt()
+}
+
+/// Cosine similarity between two Big Five profiles.
+///
+/// Returns a value in \[-1, 1\] where 1 = identical shape, 0 = orthogonal,
+/// -1 = opposite. Ignores profile elevation (mean level).
+#[must_use]
+pub fn profile_similarity(a: &BigFiveProfile, b: &BigFiveProfile) -> f64 {
+    let a_vec = [
+        a.openness,
+        a.conscientiousness,
+        a.extraversion,
+        a.agreeableness,
+        a.neuroticism,
+    ];
+    let b_vec = [
+        b.openness,
+        b.conscientiousness,
+        b.extraversion,
+        b.agreeableness,
+        b.neuroticism,
+    ];
+
+    let dot: f64 = a_vec.iter().zip(&b_vec).map(|(x, y)| x * y).sum();
+    let mag_a: f64 = a_vec.iter().map(|x| x * x).sum::<f64>().sqrt();
+    let mag_b: f64 = b_vec.iter().map(|x| x * x).sum::<f64>().sqrt();
+
+    if mag_a < 1e-15 || mag_b < 1e-15 {
+        return 0.0;
+    }
+    dot / (mag_a * mag_b)
+}
+
+// ---------------------------------------------------------------------------
+// Internal helpers
+// ---------------------------------------------------------------------------
+
 fn variance_f32(data: &[f32]) -> f64 {
     let n = data.len() as f64;
     if n < 2.0 {
@@ -259,6 +376,100 @@ mod tests {
         let json = serde_json::to_string(&dim).unwrap();
         let back: BigFiveDimension = serde_json::from_str(&json).unwrap();
         assert_eq!(dim, back);
+    }
+
+    // -- Big Five scoring --
+
+    #[test]
+    fn test_score_dimension_basic() {
+        let items = vec![3.0, 4.0, 5.0, 4.0];
+        let score = score_dimension(&items, &[], 5.0).unwrap();
+        assert!((score - 4.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_score_dimension_reverse() {
+        // Item 1 is reverse-keyed on a 1-5 scale: 2 → 5+1-2 = 4
+        let items = vec![3.0, 2.0, 4.0];
+        let score = score_dimension(&items, &[1], 5.0).unwrap();
+        // (3 + 4 + 4) / 3 ≈ 3.667
+        assert!((score - 11.0 / 3.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_score_dimension_empty() {
+        assert!(score_dimension(&[], &[], 5.0).is_err());
+    }
+
+    #[test]
+    fn test_t_score_at_mean() {
+        let t = raw_to_t_score(3.0, 3.0, 1.0).unwrap();
+        assert!((t - 50.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_t_score_one_sd_above() {
+        let t = raw_to_t_score(4.0, 3.0, 1.0).unwrap();
+        assert!((t - 60.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_profile_distance_same() {
+        let p = BigFiveProfile {
+            openness: 3.5,
+            conscientiousness: 4.0,
+            extraversion: 2.5,
+            agreeableness: 3.8,
+            neuroticism: 2.0,
+        };
+        assert!(profile_distance(&p, &p) < 1e-10);
+    }
+
+    #[test]
+    fn test_profile_distance_different() {
+        let a = BigFiveProfile {
+            openness: 1.0,
+            conscientiousness: 1.0,
+            extraversion: 1.0,
+            agreeableness: 1.0,
+            neuroticism: 1.0,
+        };
+        let b = BigFiveProfile {
+            openness: 5.0,
+            conscientiousness: 5.0,
+            extraversion: 5.0,
+            agreeableness: 5.0,
+            neuroticism: 5.0,
+        };
+        let d = profile_distance(&a, &b);
+        // sqrt(5 × 16) = sqrt(80) ≈ 8.944
+        assert!((d - 80.0_f64.sqrt()).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_profile_similarity_identical() {
+        let p = BigFiveProfile {
+            openness: 3.0,
+            conscientiousness: 4.0,
+            extraversion: 2.0,
+            agreeableness: 5.0,
+            neuroticism: 1.0,
+        };
+        assert!((profile_similarity(&p, &p) - 1.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_big_five_profile_serde_roundtrip() {
+        let p = BigFiveProfile {
+            openness: 3.5,
+            conscientiousness: 4.0,
+            extraversion: 2.5,
+            agreeableness: 3.8,
+            neuroticism: 2.0,
+        };
+        let json = serde_json::to_string(&p).unwrap();
+        let back: BigFiveProfile = serde_json::from_str(&json).unwrap();
+        assert!((p.openness - back.openness).abs() < 1e-10);
     }
 
     #[test]

@@ -18,6 +18,7 @@ bodh/
 ├── motivation.rs     — SDT, expectancy-value, flow state, goal gradient
 ├── attention.rs      — Posner cueing, visual search, attentional blink
 ├── irt.rs            — Item Response Theory (1PL/2PL/3PL), information
+├── stress.rs         — Transactional stress, coping, burnout
 ├── bridge.rs         — Cross-crate pramana bridges (primitives only)
 └── error.rs          — BodhError enum
 ```

@@ -2,6 +2,7 @@
 
 use bodh::attention;
 use bodh::bayesian;
+use bodh::cognition;
 use bodh::decision;
 use bodh::emotion;
 use bodh::irt;
@@ -9,8 +10,10 @@ use bodh::learning;
 use bodh::memory;
 use bodh::motivation;
 use bodh::perception;
+use bodh::psychometrics;
 use bodh::psychophysics;
 use bodh::social;
+use bodh::stress;
 
 #[test]
 fn test_fitts_law_d256_w4() {
@@ -243,4 +246,67 @@ fn test_irt_test_information_additive() {
     let se = irt::ability_standard_error(ti).unwrap();
     assert!(se > 0.0);
     assert!(se < 2.0); // 3 items give moderate precision
+}
+
+// -- Working memory updating --
+
+#[test]
+fn test_nback_degrades_with_level() {
+    let a1 = cognition::nback_accuracy(1, 4.0, 0.4).unwrap();
+    let a3 = cognition::nback_accuracy(3, 4.0, 0.4).unwrap();
+    assert!(a1 > a3);
+}
+
+#[test]
+fn test_complex_span_demand_reduces_capacity() {
+    let full = cognition::complex_span_capacity(4.0, 0.0, 0.8).unwrap();
+    let loaded = cognition::complex_span_capacity(4.0, 0.6, 0.8).unwrap();
+    assert!(full > loaded);
+}
+
+// -- Encoding/retrieval --
+
+#[test]
+fn test_levels_of_processing_depth() {
+    let shallow = memory::encoding_strength(memory::ProcessingLevel::Structural, 0.0, 1.0).unwrap();
+    let deep = memory::encoding_strength(memory::ProcessingLevel::Semantic, 0.0, 1.0).unwrap();
+    assert!(deep > shallow);
+}
+
+#[test]
+fn test_encoding_specificity_context_match() {
+    let matched = memory::encoding_specificity(0.8, 1.0, 2.0).unwrap();
+    let mismatched = memory::encoding_specificity(0.8, 0.3, 2.0).unwrap();
+    assert!(matched > mismatched);
+}
+
+// -- Personality --
+
+#[test]
+fn test_big_five_scoring_reverse_items() {
+    let items = vec![4.0, 2.0, 5.0, 1.0]; // item 1 and 3 reverse-keyed
+    let score = psychometrics::score_dimension(&items, &[1, 3], 5.0).unwrap();
+    // adjusted: 4, (5+1-2)=4, 5, (5+1-1)=5 → mean = 18/4 = 4.5
+    assert!((score - 4.5).abs() < 1e-10);
+}
+
+// -- Stress --
+
+#[test]
+fn test_stress_transactional_model() {
+    let secondary = stress::SecondaryAppraisal {
+        perceived_control: 0.2,
+        coping_resources: 0.2,
+        self_efficacy: 0.2,
+    };
+    let s = stress::stress_intensity(stress::PrimaryAppraisal::Threat, &secondary).unwrap();
+    assert!(s > 0.4); // high threat + low coping = high stress
+}
+
+#[test]
+fn test_burnout_risk_chronic_stress() {
+    let short = stress::burnout_risk(0.7, 1.0, 1.0).unwrap();
+    let chronic = stress::burnout_risk(0.7, 10.0, 1.0).unwrap();
+    assert!(chronic > short);
+    assert!(chronic > 0.5); // substantial risk after prolonged exposure
 }

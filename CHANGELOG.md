@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `attention` module — Posner cueing (valid/invalid/neutral), inhibition of return, visual search (feature/conjunction), attentional blink, capacity throughput
 - `irt` module — Item Response Theory: 1PL (Rasch), 2PL, 3PL models, item/test information functions, ability standard error
 - `bridge` module — cross-crate bridges for pramana statistics: t-stat→d'/Cohen's d, variance→reliability/arousal, regression→learning rate, posterior→odds, F-stat→eta², z-score→valence
+- `stress` module — Lazarus transactional stress model (primary/secondary appraisal), coping strategies with controllability fit, resource depletion (Hobfoll COR), stress-performance curve, burnout risk
+- Working memory updating: n-back accuracy model, complex span capacity, updating cost with proactive interference (`cognition` module)
+- Encoding/retrieval: levels of processing (Craik & Lockhart), encoding strength, generation effect, testing effect (desirable difficulty), encoding specificity (Tulving & Thomson) (`memory` module)
+- Big Five personality: dimension scoring with reverse-keyed items, T-score norming, profile distance, profile cosine similarity (`psychometrics` module)
 
 ### Changed
 

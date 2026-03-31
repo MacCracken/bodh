@@ -21,6 +21,7 @@
 //! - [`motivation`] — Self-determination theory, expectancy-value, flow state
 //! - [`attention`] — Posner cueing, feature integration, attentional blink
 //! - [`irt`] — Item Response Theory (1PL/2PL/3PL), information functions
+//! - [`stress`] — Transactional stress model, coping, stress-performance
 //! - [`bridge`] — Cross-crate bridges for pramana statistics integration
 //!
 //! ## Example
@@ -55,5 +56,6 @@ pub mod perception;
 pub mod psychometrics;
 pub mod psychophysics;
 pub mod social;
+pub mod stress;
 
 pub use error::BodhError;
