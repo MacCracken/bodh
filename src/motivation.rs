@@ -440,6 +440,23 @@ mod tests {
         assert!(goal_gradient(-0.1, 1.0, 1.0).is_err());
     }
 
+    // -- Known values --
+
+    #[test]
+    fn test_expectancy_value_known() {
+        // 0.7 × 8.0 = 5.6
+        let m = expectancy_value(0.7, 8.0).unwrap();
+        assert!((m - 5.6).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_flow_state_known_value() {
+        // challenge=0.8, skill=0.6: match=1−0.2=0.8, intensity=0.7
+        // flow = 0.8 × 0.7 = 0.56
+        let f = flow_state(0.8, 0.6).unwrap();
+        assert!((f - 0.56).abs() < 1e-10);
+    }
+
     // -- Serde roundtrips --
 
     #[test]

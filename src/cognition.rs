@@ -141,6 +141,7 @@ pub fn attention_bottleneck(salience_scores: &[f64], capacity: usize) -> Result<
 ///
 /// Returns [`crate::BodhError::InvalidParameter`] if n is 0, capacity is
 /// non-positive, or decay is non-finite.
+#[inline]
 #[must_use = "returns the predicted accuracy without side effects"]
 pub fn nback_accuracy(n: usize, capacity: f64, decay: f64) -> Result<f64> {
     if n == 0 {

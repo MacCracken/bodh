@@ -177,6 +177,7 @@ pub struct BigFiveProfile {
 /// # Errors
 ///
 /// Returns [`BodhError::MeasurementError`] if items are empty.
+#[inline]
 #[must_use = "returns the dimension score without side effects"]
 pub fn score_dimension(items: &[f32], reverse_keyed: &[usize], max_score: f32) -> Result<f64> {
     if items.is_empty() {
@@ -233,6 +234,7 @@ pub fn profile_distance(a: &BigFiveProfile, b: &BigFiveProfile) -> f64 {
 ///
 /// Returns a value in \[-1, 1\] where 1 = identical shape, 0 = orthogonal,
 /// -1 = opposite. Ignores profile elevation (mean level).
+#[inline]
 #[must_use]
 pub fn profile_similarity(a: &BigFiveProfile, b: &BigFiveProfile) -> f64 {
     let a_vec = [

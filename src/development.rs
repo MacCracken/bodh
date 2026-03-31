@@ -147,14 +147,34 @@ mod tests {
     }
 
     #[test]
-    fn test_erikson_from_age() {
+    fn test_erikson_from_age_all_stages() {
         assert_eq!(
             EriksonStage::from_age(0.5),
             Some(EriksonStage::TrustVsMistrust)
         );
         assert_eq!(
+            EriksonStage::from_age(2.0),
+            Some(EriksonStage::AutonomyVsShame)
+        );
+        assert_eq!(
+            EriksonStage::from_age(4.0),
+            Some(EriksonStage::InitiativeVsGuilt)
+        );
+        assert_eq!(
+            EriksonStage::from_age(8.0),
+            Some(EriksonStage::IndustryVsInferiority)
+        );
+        assert_eq!(
+            EriksonStage::from_age(15.0),
+            Some(EriksonStage::IdentityVsRoleConfusion)
+        );
+        assert_eq!(
             EriksonStage::from_age(25.0),
             Some(EriksonStage::IntimacyVsIsolation)
+        );
+        assert_eq!(
+            EriksonStage::from_age(50.0),
+            Some(EriksonStage::GenerativityVsStagnation)
         );
         assert_eq!(
             EriksonStage::from_age(70.0),
@@ -165,6 +185,25 @@ mod tests {
     #[test]
     fn test_erikson_invalid_age() {
         assert_eq!(EriksonStage::from_age(-1.0), None);
+        assert_eq!(EriksonStage::from_age(f64::NAN), None);
+    }
+
+    #[test]
+    fn test_erikson_age_ranges() {
+        let (min, max) = EriksonStage::TrustVsMistrust.typical_age_range();
+        assert!((min - 0.0).abs() < 1e-10);
+        assert!((max - 1.5).abs() < 1e-10);
+        let (min, max) = EriksonStage::IntegrityVsDespair.typical_age_range();
+        assert!((min - 65.0).abs() < 1e-10);
+        assert!((max - 100.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_piaget_age_ranges_all() {
+        let (_, max) = PiagetStage::Preoperational.typical_age_range();
+        assert!((max - 7.0).abs() < 1e-10);
+        let (min, _) = PiagetStage::FormalOperational.typical_age_range();
+        assert!((min - 11.0).abs() < 1e-10);
     }
 
     #[test]

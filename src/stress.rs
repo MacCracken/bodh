@@ -368,6 +368,28 @@ mod tests {
         assert!(fragile > resilient);
     }
 
+    // -- Known values --
+
+    #[test]
+    fn test_stress_intensity_known_value() {
+        // Threat (0.7) × (1 − mean(0.3, 0.3, 0.3)) = 0.7 × 0.7 = 0.49
+        let secondary = SecondaryAppraisal {
+            perceived_control: 0.3,
+            coping_resources: 0.3,
+            self_efficacy: 0.3,
+        };
+        let s = stress_intensity(PrimaryAppraisal::Threat, &secondary).unwrap();
+        assert!((s - 0.49).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_stress_performance_known_value() {
+        // stress=0.3, optimal=0.5, spread=0.5, peak=1.0:
+        // perf = 1.0 × (1 − (−0.2/0.5)²) = 1.0 × (1 − 0.16) = 0.84
+        let p = stress_performance(0.3, 0.5, 0.5, 1.0).unwrap();
+        assert!((p - 0.84).abs() < 1e-10);
+    }
+
     // -- Serde roundtrips --
 
     #[test]

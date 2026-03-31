@@ -1,10 +1,10 @@
 [package]
 name = "bodh"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2024"
 rust-version = "1.89"
 license = "GPL-3.0-only"
-publish = false
+publish = true
 description = "Bodh — psychology engine for cognition, perception, learning, and decision-making"
 homepage = "https://github.com/MacCracken/bodh"
 repository = "https://github.com/MacCracken/bodh"
