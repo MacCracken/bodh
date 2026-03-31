@@ -15,6 +15,10 @@ bodh/
 ├── memory.rs         — ACT-R base-level, spreading activation, retrieval
 ├── bayesian.rs       — Bayes' theorem, belief updating, cognitive biases
 ├── social.rs         — Conformity, social impact, attribution, comparison
+├── motivation.rs     — SDT, expectancy-value, flow state, goal gradient
+├── attention.rs      — Posner cueing, visual search, attentional blink
+├── irt.rs            — Item Response Theory (1PL/2PL/3PL), information
+├── bridge.rs         — Cross-crate pramana bridges (primitives only)
 └── error.rs          — BodhError enum
 ```
 
